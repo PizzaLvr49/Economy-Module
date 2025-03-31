@@ -2,6 +2,22 @@ local ProfileService = require(script.Parent.ProfileService)
 local Types = require(script.Types)
 local Economy = {}
 
+export type CurrencyData = {
+	DisplayName: string,
+	Abbreviation: string,
+	SaveKey: string,
+	CanBePurchased: boolean,
+	CanBeEarned: boolean,
+	ExchangeRateToRobux: number,
+	DefaultValue: number
+}
+
+export type Currency = CurrencyData & {
+	SetValue: (Currency, playerID: number, value: any) -> (),
+	GetValue: (Currency, playerID: number) -> any,
+	IncrementValue: (Currency, playerID: number, amount: number) -> ()
+}
+
 Economy.Currencies = {
 	Cash = {
 		DisplayName = "Cash",
@@ -74,7 +90,7 @@ for _, player in ipairs(game.Players:GetPlayers()) do
 	task.spawn(PlayerAdded, player)
 end
 -- Get a specific currency by name
-function Economy.GetCurrency(currencyName: string): Types.Currency?
+function Economy.GetCurrency(currencyName: string): Currency?
 	return Economy.Currencies[currencyName]
 end
 
@@ -133,7 +149,7 @@ local function InitializeCurrency(currencyData)
 	end
 end
 
-for _,CurrencyData: Types.CurrencyData in pairs(Economy.Currencies) do
+for _,CurrencyData: CurrencyData in pairs(Economy.Currencies) do
 	InitializeCurrency(CurrencyData)
 end
 

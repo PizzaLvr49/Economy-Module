@@ -2,7 +2,6 @@ local ProfileService = require(script.Parent.ProfileService)
 local Types = require(script.Types)
 local Economy = {}
 
--- Simple type definitions for our currencies
 export type CurrencyData = {
 	DisplayName: string,
 	Abbreviation: string,
@@ -19,7 +18,6 @@ export type Currency = CurrencyData & {
 	IncrementValue: (Currency, playerID: number, amount: number) -> ()
 }
 
--- Available currencies in the game
 Economy.Currencies = {
 	Cash = {
 		DisplayName = "Cash",
@@ -27,7 +25,7 @@ Economy.Currencies = {
 		SaveKey = "Cash",
 		CanBePurchased = true,
 		CanBeEarned = true,
-		ExchangeRateToRobux = 10_000, -- 10k cash per robux
+		ExchangeRateToRobux = 10_000,
 		DefaultValue = 1000
 	},
 	Gems = {
@@ -41,97 +39,118 @@ Economy.Currencies = {
 	}
 }
 
-local store = ProfileService.GetProfileStore("PlayerEconomy1", { Currencies = {} })
-local cache = {}
+-- Setup ProfileService
+local ProfileStore = ProfileService.GetProfileStore(
+	"PlayerEconomy1",
+	{
+		Currencies = {}
+	}
+)
 
-local function loadPlayerData(player)
-	local key = "Player_" .. player.UserId
-	local data = store:LoadProfileAsync(key)
-	
-	if not data then
-		player:Kick("Oof! Data load failed - try again")
-		return
-	end
-	
-	if player:IsDescendantOf(game.Players) then
-		data:AddUserId(player.UserId)
-		data:Reconcile()
-		cache[player.UserId] = data
-		
-		-- First time playing? Set up their wallet
-		data.Data.Currencies = data.Data.Currencies or {}
+local Profiles = {}
+
+-- Handle player joining and initialize their profile
+local function PlayerAdded(player)
+	local profile = ProfileStore:LoadProfileAsync("Player_" .. player.UserId)
+
+	if profile ~= nil then
+		profile:AddUserId(player.UserId) -- GDPR compliance
+		profile:Reconcile() -- Fill in missing data
+
+		if player:IsDescendantOf(game.Players) then
+			Profiles[player.UserId] = profile
+			-- Initialize currency data if doesn't exist
+			if not profile.Data.Currencies then
+				profile.Data.Currencies = {}
+			end
+		else
+			profile:Release() -- Player left before profile loaded
+		end
 	else
-		data:Release()
+		-- Failed to load profile
+		player:Kick("Failed to load your data. Please rejoin.")
 	end
 end
 
-local function cleanupPlayerData(player)
-	local data = cache[player.UserId]
-	if data then
-		data:Release()
-		cache[player.UserId] = nil
+-- Handle player leaving and release their profile
+local function PlayerRemoving(player)
+	local profile = Profiles[player.UserId]
+	if profile then
+		profile:Release()
+		Profiles[player.UserId] = nil
 	end
 end
 
-game.Players.PlayerAdded:Connect(loadPlayerData)
-game.Players.PlayerRemoving:Connect(cleanupPlayerData)
+-- Connect player events when the game starts
+game.Players.PlayerAdded:Connect(PlayerAdded)
+game.Players.PlayerRemoving:Connect(PlayerRemoving)
 
--- Load data for players already in game
+-- Initialize existing players
 for _, player in ipairs(game.Players:GetPlayers()) do
-	task.spawn(loadPlayerData, player)
+	task.spawn(PlayerAdded, player)
+end
+-- Get a specific currency by name
+function Economy.GetCurrency(currencyName: string): Currency?
+	return Economy.Currencies[currencyName]
 end
 
-function Economy.GetCurrency(name: string): Currency?
-	return Economy.Currencies[name]
-end
-
+-- Purchase currency with Robux
 function Economy.PurchaseCurrency(player: Player, currencyName: string, robuxAmount: number): boolean
 	local currency = Economy.Currencies[currencyName]
-	if not currency or not currency.CanBePurchased then 
-		return false 
-	end
+	if not currency or not currency.CanBePurchased then return false end
 
-	-- You'd want to add your actual purchase logic here
-	local success = true -- Placeholder for real transaction code
-	
-	if success then
-		local amount = robuxAmount * currency.ExchangeRateToRobux
-		currency:IncrementValue(player.UserId, amount)
+	-- Calculate currency amount based on exchange rate
+	local currencyAmount = robuxAmount * currency.ExchangeRateToRobux
+
+	-- Here you would handle the actual Robux transaction
+	-- This is a simplified example
+	local transactionSuccess = true -- Replace with actual transaction logic
+
+	if transactionSuccess then
+		currency:IncrementValue(player.UserId, currencyAmount)
 		return true
 	end
+
 	return false
 end
 
--- Sets up currency methods
-local function setupCurrency(currency)
-	function currency:GetValue(playerID: number)
-		local data = cache[playerID]
-		if not data then return 0 end
-		
-		if not data.Data.Currencies[self.SaveKey] then
-			data.Data.Currencies[self.SaveKey] = self.DefaultValue
+local function InitializeCurrency(currencyData)
+	-- Get currency value from player profile
+	function currencyData:GetValue(playerID: number)
+		local profile = Profiles[playerID]
+		if not profile then return 0 end
+
+		if not profile.Data.Currencies[self.SaveKey] then
+			profile.Data.Currencies[self.SaveKey] = self.DefaultValue
+			return self.DefaultValue
 		end
-		return data.Data.Currencies[self.SaveKey]
+
+		return profile.Data.Currencies[self.SaveKey]
 	end
 
-	function currency:SetValue(playerID: number, value: any)
-		local data = cache[playerID]
-		if data then
-			data.Data.Currencies[self.SaveKey] = value
-		end
+	-- Set currency value and save to profile
+	function currencyData:SetValue(playerID: number, value: any)
+		local profile = Profiles[playerID]
+		if not profile then return end
+
+		profile.Data.Currencies[self.SaveKey] = value
 	end
 
-	function currency:IncrementValue(playerID: number, amount: number)
-		local data = cache[playerID]
-		if not data then return end
+	-- Increment currency value by amount
+	function currencyData:IncrementValue(playerID: number, amount: number)
+		local profile = Profiles[playerID]
+		if not profile then return end
+
+		if not profile.Data.Currencies[self.SaveKey] then
+			profile.Data.Currencies[self.SaveKey] = self.DefaultValue
+		end
 		
-		local current = data.Data.Currencies[self.SaveKey] or self.DefaultValue
-		data.Data.Currencies[self.SaveKey] = current + amount
+		profile.Data.Currencies[self.SaveKey] += amount
 	end
 end
 
-for _, currency in pairs(Economy.Currencies) do
-	setupCurrency(currency)
+for _,CurrencyData: CurrencyData in pairs(Economy.Currencies) do
+	InitializeCurrency(CurrencyData)
 end
 
 return Economy

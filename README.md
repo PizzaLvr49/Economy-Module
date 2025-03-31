@@ -14,8 +14,7 @@ This repository contains the source code for an economy system tutorial for a Ro
 
 To use the code in this repository, follow these steps:
 
-1. Clone the repository to your local machine using the following command:
-   git clone https://github.com/PizzaLvr49/Economy-Tutorial.git
+1. Copy the files and paste them into studio put the module and ProfileService in ServerStorage
 
 2. Open the Roblox Studio and navigate to your project.
 

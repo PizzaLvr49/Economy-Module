@@ -3,18 +3,19 @@
 This repository contains the source code for an economy system tutorial for a Roblox game. The tutorial demonstrates how to create a simple economy system using the ProfileService module for handling player data and currency management.
 
 ## Table of Contents
-
-- Installation
-- Usage
-- Features
-- Contributing
-- License
+- [Installation](#installation)
+- [Usage](#usage)
+  - [Economy.lua](#economylua)
+  - [Example.lua](#examplelua)
+- [Features](#features)
+- [Contributing](#contributing)
+- [License](#license)
 
 ## Installation
 
 To use the code in this repository, follow these steps:
 
-1. Copy the files and paste them into studio put the module and ProfileService in ServerStorage
+1. Copy or download the source files.
 
 2. Open the Roblox Studio and navigate to your project.
 

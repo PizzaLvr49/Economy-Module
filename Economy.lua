@@ -1,5 +1,5 @@
+local MarketplaceService = game:GetService("MarketplaceService")
 local ProfileService = require(script.Parent.ProfileService)
-local Types = require(script.Types)
 local Economy = {}
 
 export type CurrencyData = {
@@ -9,7 +9,8 @@ export type CurrencyData = {
 	CanBePurchased: boolean,
 	CanBeEarned: boolean,
 	ExchangeRateToRobux: number,
-	DefaultValue: number
+	DefaultValue: number,
+	PurchaseIDs: {[number]: number} -- Amount of currency: Purchase ID
 }
 
 export type Currency = CurrencyData & {
@@ -18,7 +19,7 @@ export type Currency = CurrencyData & {
 	IncrementValue: (Currency, playerID: number, amount: number) -> ()
 }
 
-Economy.Currencies = {
+local Currencies = {
 	Cash = {
 		DisplayName = "Cash",
 		Abbreviation = "$",
@@ -26,7 +27,10 @@ Economy.Currencies = {
 		CanBePurchased = true,
 		CanBeEarned = true,
 		ExchangeRateToRobux = 10_000,
-		DefaultValue = 1000
+		DefaultValue = 1000,
+		PurchaseIDs = {
+			[100] = 3253924294
+		}
 	},
 	Gems = {
 		DisplayName = "Gems",
@@ -91,24 +95,39 @@ for _, player in ipairs(game.Players:GetPlayers()) do
 end
 -- Get a specific currency by name
 function Economy.GetCurrency(currencyName: string): Currency?
-	return Economy.Currencies[currencyName]
+	return Currencies[currencyName]
 end
 
 -- Purchase currency with Robux
-function Economy.PurchaseCurrency(player: Player, currencyName: string, robuxAmount: number): boolean
-	local currency = Economy.Currencies[currencyName]
+function Economy.PurchaseCurrency(player: Player, currencyName: string, currencyAmount: number): boolean
+	local currency = Currencies[currencyName]
 	if not currency or not currency.CanBePurchased then return false end
+	
+	local purchaseID = currency.PurchaseIDs[currencyAmount]
+	
+	local success, errorMessage = pcall(function()
+		if not purchaseID then error("No Purchase ID") end
+		MarketplaceService:PromptProductPurchase(player, purchaseID)
+		local completed = false
+		local itemBought = false
+		local event = MarketplaceService.PromptProductPurchaseFinished
+		event:Connect(function(userID, productID, isPurchased)
+			itemBought = ((userID == player.UserId) and (productID == purchaseID) and isPurchased)
+			completed = true
+		end)
+		print("Processing")
+		repeat task.wait() until completed
+		print("Processed")
+		if not itemBought then error("Purchase Failed Or Player Did Not Buy Item") end
+	end)
 
-	-- Calculate currency amount based on exchange rate
-	local currencyAmount = robuxAmount * currency.ExchangeRateToRobux
-
-	-- Here you would handle the actual Robux transaction
-	-- This is a simplified example
-	local transactionSuccess = true -- Replace with actual transaction logic
-
-	if transactionSuccess then
+	if success then
 		currency:IncrementValue(player.UserId, currencyAmount)
+		Profiles[player.UserId]:Save()
+		print(currency:GetValue(player.UserId))
 		return true
+	else
+		warn(errorMessage)
 	end
 
 	return false
@@ -149,7 +168,7 @@ local function InitializeCurrency(currencyData)
 	end
 end
 
-for _,CurrencyData: CurrencyData in pairs(Economy.Currencies) do
+for _,CurrencyData: CurrencyData in pairs(Currencies) do
 	InitializeCurrency(CurrencyData)
 end
 

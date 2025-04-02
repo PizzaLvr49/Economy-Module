@@ -134,9 +134,13 @@ For support, you can:
 
 ## Roadmap
 Future enhancements include:
-- Adding support for more complex transaction types.
-- Enhancing the receipt processing system.
-- Integrating with other payment methods.
+1. Adding support for more complex transaction types.
+  - Bundled Transactions: Purchase multiple items or currencies in a single transaction.
+  - Conditional Transactions: Transactions that occur only if certain conditions are met (e.g., a player reaches a specific level).
+  - Time-Limited Offers: Special transactions available for a limited time.
+  - Subscription-Based Robux Transactions: Recurring transactions for subscription-based services with robux instead of money.
+3. Enhancing the receipt processing system.
+4. Integrating with other payment methods.
 
 ## Contributing
 Contributions are welcome! If you find any issues or have suggestions for improvements, please create an issue or submit a pull request. To get started:

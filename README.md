@@ -10,8 +10,8 @@ The Economy Module is a comprehensive economy system designed for Roblox games. 
 - **Robux Transactions**: Simplifies purchasing currency with Robux.
 - **Receipt Processing**: Ensures secure and reliable transaction processing.
 
-## Badges
-![License](LICENSE)
+## License
+[License](LICENSE)
 
 ## Visuals
 ![Economy Module Screenshot](link-to-screenshot)

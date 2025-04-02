@@ -777,7 +777,9 @@ for _, player in ipairs(Players:GetPlayers()) do
 end
 
 task.spawn(scheduleAutoSave)
-MarketplaceService.ProcessReceipt = Economy.ProcessReceipt
+
+-- let users decide so they can integrate with their other recpeipts to allow purchases that arent just economical
+-- MarketplaceService.ProcessReceipt = Economy.ProcessReceipt
 
 -- Lock the Economy module with a metatable to prevent external modifications.
 setmetatable(Economy, {

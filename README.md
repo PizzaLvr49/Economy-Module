@@ -136,7 +136,6 @@ For support, you can:
 Future enhancements include:
 1. Adding support for more complex transaction types:
    - Bundled Transactions: Purchase multiple items or currencies in a single transaction.
-   - Conditional Transactions: Transactions that occur only if certain conditions are met (e.g., a player reaches a specific level).
    - Time-Limited Offers: Special transactions available for a limited time.
    - Subscription-Based Robux Transactions: Recurring transactions for subscription-based services with robux instead of money.
 3. Enhancing the receipt processing system.

@@ -71,7 +71,6 @@ To get started using the Economy Module, follow these steps:
    - Add the ProfileService module to your project.
 
 2. **Defining Currencies**:
-   - Use thee `Economy.CreateCurrency()` method.
    ```lua
    Economy.CreateCurrency("Cash", {
       displayName = "Cash",
@@ -97,7 +96,7 @@ To get started using the Economy Module, follow these steps:
 
    - **Handling Player Join**:
      ```lua
-     game.Players.PlayerAdded:Connect(function(player)
+     Players.PlayerAdded:Connect(function(player)
          print("Player joined:", player.Name)
          local playerCurrencies = Economy.GetPlayerCurrencies(player.UserId)
          print("Player currencies:", playerCurrencies)

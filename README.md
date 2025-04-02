@@ -143,7 +143,7 @@ To get started using the Economy Module, follow these steps:
 
    - **Handling Receipts**:
      ```lua
-     game:GetService("MarketplaceService").ProcessReceipt = Economy.ProcessReceipt
+     MarketplaceService.ProcessReceipt = Economy.ProcessReceipt
      ```
 
 ## Support

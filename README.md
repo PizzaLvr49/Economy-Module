@@ -75,7 +75,7 @@ To get started using the Economy Module, follow these steps:
    ```lua
    Economy.CreateCurrency("Cash", {
       displayName = "Cash",
-      abbreviation = "C",
+      abbreviation = "$",
       saveKey = "cash",
       canBePurchased = true,
       canBeEarned = true,

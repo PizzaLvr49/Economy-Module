@@ -13,9 +13,6 @@ The Economy Module is a comprehensive economy system designed for Roblox games. 
 ## License
 [MIT License](LICENSE)
 
-## Visuals
-![Economy Module Screenshot](link-to-screenshot)
-
 ## Installation
 To use the Economy Module in your Roblox project, follow these steps:
 
@@ -25,9 +22,9 @@ To use the Economy Module in your Roblox project, follow these steps:
 4. Ensure that the ProfileService module is available in your project. You can find the ProfileService module [here](https://devforum.roblox.com/t/profileservice-datastore-module/667805).
 
 ## Usage
-The `Economy.lua` script defines the Economy module and provides functions to manage player currencies. Here are the key exposed functions:
+The `Economy.lua` script defines the Economy module and provides functions to manage player currencies. Here are the key functions:
 
-### Exposed Functions
+### Usage
 
 #### GetCurrency
 Retrieve a currency by its name.
@@ -74,34 +71,22 @@ To get started using the Economy Module, follow these steps:
    - Add the ProfileService module to your project.
 
 2. **Defining Currencies**:
-   - Define your currencies within the `Currencies` table in `Economy.lua`.
+   - Use thee `Economy.CreateCurrency()` method.
    ```lua
-   local Currencies = {
-       Cash = {
-           displayName = "Cash",
-           abbreviation = "C",
-           saveKey = "cash",
-           canBePurchased = true,
-           canBeEarned = true,
-           exchangeRateToRobux = 0.01,
-           defaultValue = 0,
-           minValue = 0,
-           maxValue = 1000000,
-           purchaseIDs = { [100] = {SKU = "cash100", ID = 123456} }
-       },
-       Gems = {
-           displayName = "Gems",
-           abbreviation = "G",
-           saveKey = "gems",
-           canBePurchased = true,
-           canBeEarned = true,
-           exchangeRateToRobux = 0.1,
-           defaultValue = 0,
-           minValue = 0,
-           maxValue = 100000,
-           purchaseIDs = { [10] = {SKU = "gems10", ID = 123457} }
-       }
-   }
+   Economy.CreateCurrency("Cash", {
+      displayName = "Cash",
+      abbreviation = "C",
+      saveKey = "cash",
+      canBePurchased = true,
+      canBeEarned = true,
+      exchangeRateToRobux = 0.01,
+      defaultValue = 0,
+      minValue = 0,
+      maxValue = 1000000,
+      purchaseIDs = {
+         [100] = {SKU = "cash100", ID = 123456}
+      }
+   })
    ```
 
 3. **Using the Module**:

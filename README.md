@@ -133,7 +133,7 @@ To get started using the Economy Module, follow these steps:
 ## Support
 For support, you can:
 - Open an issue in this repository.
-- Reach out via email at support@example.com.
+- Reach out via discord at [@PizzaLvr49](https://discordapp.com/users/1188968032169627710)
 
 ## Roadmap
 Future enhancements include:

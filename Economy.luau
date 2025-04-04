@@ -76,7 +76,7 @@ local profiles = {}
 local transactionLocks = {}
 local receiptProcessingMap = {}
 local transactionQueues = {}
-local developerProductMapping = {}
+local developerProductCallbacks = {} -- {[number]: }
 
 local function processNextTransaction(playerID)
 	local queue = transactionQueues[playerID]
@@ -517,71 +517,27 @@ for currencyName, currencyData in pairs(Currencies) do
 	initializeCurrency(currencyName, currencyData)
 end
 
-function Economy.CreateCustomPurchase(player: Player, purchaseID: number, successCallback, customCallback)
-	-- Ensure mapping table exists
-	developerProductMapping = developerProductMapping or {}
+function Economy.CreateCustomPurchase(purchaseID: number, customCallback: (userID: number) -> ())
+	developerProductCallbacks[purchaseID] = customCallback
 
-	-- Ensure a valid callback is set
-	customCallback = customCallback or function(receiptInfo)
-		print("[Economy] Default custom callback executed for", receiptInfo.ProductId)
-		return true
-	end
-
-	-- Add or replace the mapping
-	developerProductMapping[purchaseID] = {
-		customCallback = customCallback
-	}
-
-	-- Return the callable purchase function
-	return function()
-		local success, errorMessage = pcall(function()
-			MarketplaceService:PromptProductPurchase(player, purchaseID)
-		end)
-
-		if not success then
-			warn("[Economy] Error prompting product purchase: " .. errorMessage)
-			return false, "Failed to prompt purchase"
-		end
+	return function(player: Player)
+		MarketplaceService:PromptProductPurchase(player, purchaseID)
 
 		local completed = false
-		local purchased = false
 
-		local connection
-		connection = MarketplaceService.PromptProductPurchaseFinished:Connect(function(userId, productId, isPurchased)
+		local connection = MarketplaceService.PromptProductPurchaseFinished:Connect(function(userId: number, productId: number, isPurchased: boolean)
 			if userId == player.UserId and productId == purchaseID then
 				completed = true
-				purchased = isPurchased
-
-				local receiptInfo = {
-					PlayerId = player.UserId,
-					ProductId = purchaseID,
-					PurchaseId = HttpService:GenerateGUID(false)
-				}
-
-				local callbackSuccess, callbackResult = pcall(customCallback, receiptInfo)
-				if not callbackSuccess then
-					warn("[Economy] Custom purchase callback failed: " .. tostring(callbackResult))
-					if successCallback then
-						successCallback(false, callbackResult)
-					end
-				else
-					if successCallback then
-						successCallback(isPurchased, callbackResult)
-					end
-				end
 			end
 		end)
 
 		repeat task.wait() until completed
-		if connection then
-			connection:Disconnect()
-		end
-
-		return purchased, "Purchase process complete"
+		connection:Disconnect()
 	end
+
 end
 
-function Economy.PurchaseCurrencyAsync(player, currencyName, currencyAmount)
+function Economy.PurchaseCurrency(player: Player, currencyName, currencyAmount)
 	if not (player and player:IsA("Player")) then
 		return false, "Invalid player"
 	end
@@ -609,17 +565,19 @@ function Economy.PurchaseCurrencyAsync(player, currencyName, currencyAmount)
 		warn("[Economy] Error prompting product purchase: " .. errorMessage)
 		return false, "Failed to prompt purchase"
 	end
+
 	local completed = false
-	local purchased = false
-	local connection = MarketplaceService.PromptProductPurchaseFinished:Connect(function(userId, productId, isPurchased)
+
+	local connection = MarketplaceService.PromptProductPurchaseFinished:Connect(function(userId: number, productId: number, isPurchased: boolean)
 		if userId == player.UserId and productId == purchaseID then
 			completed = true
-			purchased = isPurchased
 		end
 	end)
+
 	repeat task.wait() until completed
 	connection:Disconnect()
-	return purchased
+
+	return true
 end
 
 function Economy.GetPurchaseOptions(currencyName): { amount: number, info: {SKU: string, ID: number} }?
@@ -632,7 +590,7 @@ function Economy.GetPurchaseOptions(currencyName): { amount: number, info: {SKU:
 		table.insert(options, { amount = amount, info = productInfo })
 	end
 	table.sort(options, function(a, b) return a.amount < b.amount end)
-	return options
+	return options :: { amount: number, info: {SKU: string, ID: number} }
 end
 
 function Economy.GetCurrency(currencyName): Currency?
@@ -683,43 +641,14 @@ function Economy.ProcessReceipt(receiptInfo)
 		receiptProcessingMap[receiptInfo.PurchaseId] = nil
 		return Enum.ProductPurchaseDecision.PurchaseGranted
 	end
-	local mapping = developerProductMapping[receiptInfo.ProductId]
-	if not mapping then
+	local callback = developerProductCallbacks[receiptInfo.ProductId]
+	if not callback then
 		warn("[Economy] Unknown developer product ID: " .. tostring(receiptInfo.ProductId))
 		receiptProcessingMap[receiptInfo.PurchaseId] = nil
 		return Enum.ProductPurchaseDecision.PurchaseGranted
 	end
-	if mapping.customCallback then
-		local success, err = pcall(mapping.customCallback, receiptInfo)
-		if not success then
-			warn("[Economy] Custom purchase callback failed for receipt " .. receiptInfo.PurchaseId .. ": " .. (err or "Unknown error"))
-			receiptProcessingMap[receiptInfo.PurchaseId] = nil
-			return Enum.ProductPurchaseDecision.NotProcessedYet
-		end
-	else
-		local currency = mapping.currencyData
-		local success, errorMsg = currency:IncrementValue(
-			receiptInfo.PlayerId, 
-			mapping.amount, 
-			mapping.currencyData.purchaseIDs[mapping.amount].SKU,
-			Enum.AnalyticsEconomyTransactionType.IAP
-		)
-		if not success then
-			warn("[Economy] Failed to grant currency for receipt " .. receiptInfo.PurchaseId .. ": " .. (errorMsg or "Unknown error"))
-			receiptProcessingMap[receiptInfo.PurchaseId] = nil
-			return Enum.ProductPurchaseDecision.NotProcessedYet
-		end
-		if DebugMode then
-			print("[Economy] Purchase processed for product:", mapping.currencyData.purchaseIDs[mapping.amount].SKU)
-		end
-	end
-	profile.Data.processedReceipts[receiptInfo.PurchaseId] = DateTime.now().UnixTimestampMillis * 1000
-	local saveSuccess, saveError = pcall(function() profile:Save() end)
-	if not saveSuccess then
-		warn("[Economy] Failed to save profile after purchase: " .. (saveError or "Unknown error"))
-	end
-	receiptProcessingMap[receiptInfo.PurchaseId] = nil
-	return Enum.ProductPurchaseDecision.PurchaseGranted
+
+	callback(receiptInfo.PlayerId)
 end
 
 function Economy.CreateCurrency(currencyName: string, currencyConfig: CurrencyData): Currency
@@ -730,11 +659,10 @@ function Economy.CreateCurrency(currencyName: string, currencyConfig: CurrencyDa
 	initializeCurrency(currencyName, Currencies[currencyName])
 	if Currencies[currencyName].purchaseIDs then
 		for amount, productInfo in pairs(currencyConfig.purchaseIDs) do
-			developerProductMapping[productInfo.ID] = { 
-				currencyName = currencyName,
-				currencyData = currencyConfig, 
-				amount = amount 
-			}
+			developerProductCallbacks[productInfo.ID] = function(userID)
+				local currency = Economy.GetCurrency(currencyName)
+				currency:IncrementValue(userID, amount, currency.purchaseIDs[amount].SKU)
+			end
 		end
 	end
 	return Currencies[currencyName]
@@ -742,14 +670,18 @@ end
 
 Players.PlayerAdded:Connect(playerAdded)
 Players.PlayerRemoving:Connect(playerRemoving)
+
 for _, player in ipairs(Players:GetPlayers()) do
 	task.spawn(playerAdded, player)
 end
+
 task.spawn(scheduleAutoSave)
+
 setmetatable(Economy, {
 	__newindex = function(table, key, value)
 		error("Attempt to modify read-only Economy module property: " .. tostring(key))
 	end,
 	__metatable = "Locked"
 })
+
 return Economy

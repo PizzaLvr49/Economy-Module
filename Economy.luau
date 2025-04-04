@@ -517,25 +517,36 @@ for currencyName, currencyData in pairs(Currencies) do
 	initializeCurrency(currencyName, currencyData)
 end
 
-function Economy.CreateCustomPurchase(purchaseID: number, customCallback: (userID: number) -> ())
+function Economy.CreateCustomPurchase(purchaseID: number, customCallback: (userID: number) -> (), isPurchasedCallback: (userID: number, success: boolean, errorMessage: string?) -> ())
 	developerProductCallbacks[purchaseID] = customCallback
 
 	return function(player: Player)
-		MarketplaceService:PromptProductPurchase(player, purchaseID)
+		local success, errorMessage = pcall(function()
+			MarketplaceService:PromptProductPurchase(player, purchaseID)
+		end)
+
+		if not success then
+			warn("Failed to prompt purchase: " .. errorMessage)
+			isPurchasedCallback(player.UserId, false, errorMessage)
+			return
+		end
 
 		local completed = false
+		local purchased = false
 
 		local connection: RBXScriptConnection
 		connection = MarketplaceService.PromptProductPurchaseFinished:Connect(function(userId: number, productId: number, isPurchased: boolean)
 			if userId == player.UserId and productId == purchaseID then
 				completed = true
+				purchased = isPurchased
 				connection:Disconnect()
 			end
 		end)
 
 		repeat task.wait() until completed
-	end
 
+		isPurchasedCallback(player.UserId, purchased, purchased and "" or "User Cancelled Purchase")
+	end
 end
 
 function Economy.PurchaseCurrency(player: Player, currencyName, currencyAmount)
@@ -676,6 +687,8 @@ Players.PlayerRemoving:Connect(playerRemoving)
 for _, player in ipairs(Players:GetPlayers()) do
 	task.spawn(playerAdded, player)
 end
+
+MarketplaceService.ProcessReceipt = Economy.ProcessReceipt
 
 task.spawn(scheduleAutoSave)
 

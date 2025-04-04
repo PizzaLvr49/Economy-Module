@@ -525,14 +525,15 @@ function Economy.CreateCustomPurchase(purchaseID: number, customCallback: (userI
 
 		local completed = false
 
-		local connection = MarketplaceService.PromptProductPurchaseFinished:Connect(function(userId: number, productId: number, isPurchased: boolean)
+		local connection: RBXScriptConnection
+		connection = MarketplaceService.PromptProductPurchaseFinished:Connect(function(userId: number, productId: number, isPurchased: boolean)
 			if userId == player.UserId and productId == purchaseID then
 				completed = true
+				connection:Disconnect()
 			end
 		end)
 
 		repeat task.wait() until completed
-		connection:Disconnect()
 	end
 
 end
@@ -568,14 +569,15 @@ function Economy.PurchaseCurrency(player: Player, currencyName, currencyAmount)
 
 	local completed = false
 
-	local connection = MarketplaceService.PromptProductPurchaseFinished:Connect(function(userId: number, productId: number, isPurchased: boolean)
+	local connection: RBXScriptConnection
+	connection = MarketplaceService.PromptProductPurchaseFinished:Connect(function(userId: number, productId: number, isPurchased: boolean)
 		if userId == player.UserId and productId == purchaseID then
 			completed = true
+			connection:Disconnect()
 		end
 	end)
 
 	repeat task.wait() until completed
-	connection:Disconnect()
 
 	return true
 end
